@@ -1,0 +1,26 @@
+name: publish
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: Set version in src/version.js
+        run: echo "export const version = '${GITHUB_REF_NAME#v}';" > src/version.ts
+      - run: |
+          npm version --no-git-tag-version ${GITHUB_REF_NAME#v}
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

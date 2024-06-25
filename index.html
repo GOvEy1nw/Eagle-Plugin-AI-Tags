@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en" theme="dark" platform="win32">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./assets/css/index-ecf36612.css">
+  <title>AI Auto Tag</title>
+  <style>
+    html,
+    body {
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      /* Avoids scrollbars if not necessary */
+    }
+
+    button {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      background-color: #007BFF;
+      /* Bootstrap primary color */
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+      /* Space above the button */
+    }
+
+    p {
+      margin-top: 10px;
+      /* Space above the status message */
+      color: #333;
+      /* Dark text color for readability */
+    }
+
+    .tagOptions {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 10px;
+      min-width: max-content;
+    }
+
+    .tagOptions#settings {
+      justify-content: flex-end;
+      -webkit-app-region: no-drag;
+    }
+
+    .subOptions {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .menu {
+      display: none;
+      position: absolute;
+      top: 30px;
+      left: auto;
+      transform: translateX(-32px);
+      background: hsl(225deg 8% 8%);
+      border: 1px solid var(--color-border-secondary);
+      padding: 10px;
+      z-index: 1000;
+    }
+
+    button#saveApiKey {
+      background-color: #00c040;
+    }
+
+    button#clearApiKey {
+      background-color: #d32222;
+    }
+
+    button#cancelButton {
+      width: auto;
+    }
+
+    .menu.visible {
+      display: block;
+    }
+
+    .menu.visible::after {
+      content: "";
+      position: absolute;
+      left: 90%;
+      bottom: 100%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: transparent transparent hsl(225deg 8% 8%) transparent;
+    }
+
+    #apiKeyStatus,
+    button {
+      margin: 0;
+    }
+
+    #processLog {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      height: calc(100vh - 200px);
+}
+
+    #processLogBox {
+      font-size: 10px;
+      color: #ffffff;
+      width: 90%;
+      margin-top: 10px;
+      padding: 5px 10px;
+      border: white 1px solid;
+      margin-left: auto;
+      overflow: scroll;
+      margin-right: auto;
+      height: 100%;
+      margin-bottom: 10px;
+}
+
+
+    #log {
+      font-size: 10px;
+      color: #555555;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    #status {
+      z-index: 10;
+      position: absolute;
+      font-size: 10px;
+      color: white;
+      overflow: hidden;
+      line-height: initial;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 90%;
+}
+
+    #progressBar {
+      transition: width 0.5s ease-in-out;
+      position: relative;
+      height: 30px;
+    }
+
+    #progressBarContainer {
+      position: relative;
+      background-color: #999999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      overflow: hidden;
+      height: 25px;
+      border-radius: 6px;
+    }
+
+
+    #statusContainer {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+      width: 100%;
+      margin-right: 10px;
+    }
+
+    @keyframes sheen {
+      0% {
+        transform: translateX(-100%)
+      }
+
+      100% {
+        transform: translateX(100%)
+      }
+    }
+
+    .sheen::after {
+      content: '';
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+      position: absolute;
+      top: 0;
+      left: 0;
+      animation: sheen 2s infinite;
+    }
+
+    .no-sheen::after {
+      animation: none !important;
+      display: none !important;
+    }
+
+    .customheader {
+      -webkit-app-region: drag;
+      color: white;
+      padding: 5px 10px 5px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-border-secondary);
+      background: hsl(225deg 8% 8%);
+    }
+
+    .close-button {
+      -webkit-app-region: no-drag;
+      background-color: rgb(150, 21, 21);
+    }
+
+    .title {
+      color: var(--color-text-primary);
+      font-weight: var(--font-weight-bold);
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    button#run {
+      height: 25px;
+      line-height: 25px;
+      border-radius: 6px;
+      color: var(--text-color) !important;
+      background-color: var(--background-color) !important;
+      background-image: linear-gradient(0deg, var(--background-mix-color), var(--background-mix-color)) !important;
+      border: 1px solid var(--border-color) !important;
+      font-size: 13px;
+      padding: 0 16px;
+      margin: 0;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 30px;
+      height: 15px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      -webkit-transition: .4s;
+      transition: .4s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 13px;
+      width: 13px;
+      left: 2px;
+      bottom: 1px;
+      background-color: white;
+      -webkit-transition: .4s;
+      transition: .4s;
+    }
+
+    input[type="textarea"], input[type="text"] {
+      background-color: #2c2c2c;
+      border: 1px solid var(--color-border-secondary);
+      color: white;
+      padding-bottom: 3px;
+      padding-top: 3px;
+    }
+
+    input:checked+.slider {
+      background-color: #2196F3;
+    }
+
+    input:focus+.slider {
+      box-shadow: 0 0 1px #2196F3;
+    }
+
+    input:checked+.slider:before {
+      -webkit-transform: translateX(13px);
+      -ms-transform: translateX(13px);
+      transform: translateX(13px);
+    }
+
+    .dropdown {
+      width: 100%;
+      display: block;
+      padding-bottom: 3px;
+      padding-top: 3px;
+      font-size: 12px;
+      color: white;
+      background-color: #2c2c2c;
+      border: 1px solid var(--color-border-secondary);
+}
+
+    #apiOption {
+      padding-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-content: center;
+      flex-direction: column;
+    }
+
+    /* Rounded sliders */
+    .slider.round {
+      border-radius: 34px;
+    }
+
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+    input:focus-visible {
+      outline: none;
+    }
+
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+  <div id="app" style="margin: auto;">
+    <div class="customheader">
+      <div class="title"><i class="fa fa-tag" aria-hidden="true" style="color: #007BFF;"></i> AI Auto Tag</div>
+      <div style="-webkit-app-region: no-drag"><label class="switch">
+          <input type="checkbox" id="useOllama">
+          <span class="slider round"></span>
+        </label> Ollama
+      </div>
+      <div id="settings" class="tagOptions">
+        <p id="apiKeyStatus"></p>
+        <button id="settingsButton"><i class="fa fa-cog" aria-hidden="true"></i></button>
+        <div id="settingsWindow" class="menu">
+          <div id="localOptions" style="display: none;">
+            <div style="display: block; padding-bottom: 5px;">Installed
+              Models</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+            <select id="ollamaModel" class="dropdown" style="width: 100%; display: block;">
+              <!-- Options will be populated dynamically -->
+            </select>
+            <button id="deleteModelButton"><i class="fa fa-trash" aria-hidden="true"></i></button>
+          </div>
+            <div style="display: block; margin-top: 15px;"><input type="checkbox" id="preLoadModel" title="Preload model"> <label
+              for="preLoadModel" class="tagsText">Preload Model</label></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+              <div style="display: block; padding: 15px 0 5px 0;">
+                Download Models</div>
+              <div style="display: block; color: #ffffff; font-size: 10px; padding: 15px 0 5px 0;"><a id="searchButton" href="#" style="color: #ffffff;">find models</a></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+              <input type="text" id="customModelName" placeholder="e.g. 'llava:13b'">
+              <button id="downloadModel" style="width: 100%;"><i class="fa fa-download" aria-hidden="true"></i></button></div>
+          </div>
+          <div id="apiKeyMenu">
+          <div id="apiOption">
+            <select id="apiProvider" class="dropdown" style="margin-bottom:10px;">
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Gemini</option>
+              <option value="claude">Claude</option>
+            </select>
+          <div id="apiSettings">
+          <input type="textarea" id="apiKey" placeholder="Enter API key" style="width: 150px;">
+          <button id="saveApiKey"><i class="fa fa-save" aria-hidden="true"></i></button>
+          <button id="clearApiKey"><i class="fa fa-trash" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          </div>
+          <div id="generalSettings" style="display: block; margin-top: 15px;"><input type="checkbox" id="showProcessLog" title="Show process log"> <label
+            for="showProcessLog" class="tagsText">Show process log</label></div>
+        </div>
+        <button id="closeButton" class="close-button"><i class="fa fa-close" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    <p></p>
+    <div style="max-width: min-content; padding: 20px; margin: 0 auto;">
+      <div class="tagOptions">
+        <div class="subOptions"><input type="checkbox" id="enableTagLimit"
+            title="limit the number of tags that are added" checked onchange="toggleTagLimitVisibility()"> <label
+            for="enableTagLimit">Limit Tags</label></div>
+        <div class="subOptions" style="width: 25px; justify-content: center; font-weight: 600; color: #007BFF;"><output
+            id="tagLimitOutput">10</output></div>
+        <div class="subOptions"><input type="range" id="tagLimit" min="1" max="50" value="10"
+            oninput="tagLimitOutput.value = this.value"></div>
+      </div>
+      <p></p>
+      <div class="tagOptions">
+        <div><input type="checkbox" id="useThumbnail"
+            title="Send the eagle generated thumbnails for tag generation, instead of the original image"> <label
+            for="useThumbnail">Use thumbnails</label></div>
+        <div><input type="checkbox" id="replaceTags" title="Replace all existing tags with new ones"> <label
+            for="replaceTags" class="tagsText">Replace existing tags</label></div>
+      </div>
+      </div>
+      <div id="processLog">
+      <div id="processLogBox"></div>
+      <button id="clearProcessLog">Clear</button>
+    </div>
+    <div class="footer-vue">
+      <div id="statusContainer">
+        <div id="progressBarContainer">
+          <div id="status"></div>
+          <div style="width: 100%;">
+            <div id="progressBar" style="width: 0%; background-color: #007BFF;"></div>
+          </div>
+        </div>
+        <div id="cancelProcess" style="display: none;">
+          <button id="cancelButton"><i class="fa fa-close"
+            aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="action">
+        <button id="run" type="button" class="el-button el-button--primary"><span>Go</span></button>
+      </div>
+    </div>
+    </div>
+  </div>
+  <script src="js/plugin.js"></script>
+</body>
+
+</html>
