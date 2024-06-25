@@ -53,6 +53,7 @@
       display: flex;
       justify-content: flex-start;
       align-items: center;
+      gap: 5px;
     }
 
     .menu {
@@ -104,7 +105,7 @@
       flex-direction: column;
       align-items: center;
       height: calc(100vh - 200px);
-}
+    }
 
     #processLogBox {
       font-size: 10px;
@@ -118,7 +119,7 @@
       margin-right: auto;
       height: 100%;
       margin-bottom: 10px;
-}
+    }
 
 
     #log {
@@ -140,10 +141,10 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       max-width: 90%;
-}
+    }
 
     #progressBar {
-      transition: width 0.5s ease-in-out;
+      transition: width 0.2s ease-in-out;
       position: relative;
       height: 30px;
     }
@@ -269,7 +270,8 @@
       transition: .4s;
     }
 
-    input[type="textarea"], input[type="text"] {
+    input[type="textarea"],
+    input[type="text"] {
       background-color: #2c2c2c;
       border: 1px solid var(--color-border-secondary);
       color: white;
@@ -300,7 +302,7 @@
       color: white;
       background-color: #2c2c2c;
       border: 1px solid var(--color-border-secondary);
-}
+    }
 
     #apiOption {
       padding-bottom: 10px;
@@ -326,6 +328,42 @@
       outline: none;
     }
 
+    #sortableList {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #sortableList li {
+      margin: 5px 0;
+      padding: 5px;
+      border: 1px solid var(--color-border-secondary);
+      background-color: #2c2c2c;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #sortableList li button.deleteItem {
+      background: none;
+      border: none;
+      color: #ff4d4f;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 10px;
+    }
+
+    #sortableList li button.deleteItem:hover {
+      color: #ff7875;
+    }
+
+    #importanceList {
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 5px;
+    }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -346,39 +384,41 @@
           <div id="localOptions" style="display: none;">
             <div style="display: block; padding-bottom: 5px;">Installed
               Models</div>
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
-            <select id="ollamaModel" class="dropdown" style="width: 100%; display: block;">
-              <!-- Options will be populated dynamically -->
-            </select>
-            <button id="deleteModelButton"><i class="fa fa-trash" aria-hidden="true"></i></button>
-          </div>
-            <div style="display: block; margin-top: 15px;"><input type="checkbox" id="preLoadModel" title="Preload model"> <label
-              for="preLoadModel" class="tagsText">Preload Model</label></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+              <select id="ollamaModel" class="dropdown" style="width: 100%; display: block;">
+                <!-- Options will be populated dynamically -->
+              </select>
+              <button id="deleteModelButton"><i class="fa fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <div style="display: block; margin-top: 15px;"><input type="checkbox" id="preLoadModel"
+                title="Preload model"> <label for="preLoadModel" class="tagsText">Preload Model</label></div>
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
               <div style="display: block; padding: 15px 0 5px 0;">
                 Download Models</div>
-              <div style="display: block; color: #ffffff; font-size: 10px; padding: 15px 0 5px 0;"><a id="searchButton" href="#" style="color: #ffffff;">find models</a></div>
+              <div style="display: block; color: #ffffff; font-size: 10px; padding: 15px 0 5px 0;"><a id="searchButton"
+                  href="#" style="color: #ffffff;">find models</a></div>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
               <input type="text" id="customModelName" placeholder="e.g. 'llava:13b'">
-              <button id="downloadModel" style="width: 100%;"><i class="fa fa-download" aria-hidden="true"></i></button></div>
-          </div>
-          <div id="apiKeyMenu">
-          <div id="apiOption">
-            <select id="apiProvider" class="dropdown" style="margin-bottom:10px;">
-              <option value="openai">OpenAI</option>
-              <option value="gemini">Gemini</option>
-              <option value="claude">Claude</option>
-            </select>
-          <div id="apiSettings">
-          <input type="textarea" id="apiKey" placeholder="Enter API key" style="width: 150px;">
-          <button id="saveApiKey"><i class="fa fa-save" aria-hidden="true"></i></button>
-          <button id="clearApiKey"><i class="fa fa-trash" aria-hidden="true"></i></button>
+              <button id="downloadModel" style="width: 100%;"><i class="fa fa-download" aria-hidden="true"></i></button>
             </div>
           </div>
+          <div id="apiKeyMenu">
+            <div id="apiOption">
+              <select id="apiProvider" class="dropdown" style="margin-bottom:10px;">
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+                <option value="claude">Claude</option>
+              </select>
+              <div id="apiSettings">
+                <input type="textarea" id="apiKey" placeholder="Enter API key" style="width: 150px;">
+                <button id="saveApiKey"><i class="fa fa-save" aria-hidden="true"></i></button>
+                <button id="clearApiKey"><i class="fa fa-trash" aria-hidden="true"></i></button>
+              </div>
+            </div>
           </div>
-          <div id="generalSettings" style="display: block; margin-top: 15px;"><input type="checkbox" id="showProcessLog" title="Show process log"> <label
-            for="showProcessLog" class="tagsText">Show process log</label></div>
+          <div id="generalSettings" style="display: block; margin-top: 15px;"><input type="checkbox" id="showProcessLog"
+              title="Show process log"> <label for="showProcessLog" class="tagsText">Show process log</label></div>
         </div>
         <button id="closeButton" class="close-button"><i class="fa fa-close" aria-hidden="true"></i></button>
       </div>
@@ -396,14 +436,27 @@
       </div>
       <p></p>
       <div class="tagOptions">
-        <div><input type="checkbox" id="useThumbnail"
+        <div class="subOptions"><input type="checkbox" id="useThumbnail"
             title="Send the eagle generated thumbnails for tag generation, instead of the original image"> <label
             for="useThumbnail">Use thumbnails</label></div>
-        <div><input type="checkbox" id="replaceTags" title="Replace all existing tags with new ones"> <label
+        <div class="subOptions"><input type="checkbox" id="replaceTags" title="Replace all existing tags with new ones"> <label
             for="replaceTags" class="tagsText">Replace existing tags</label></div>
       </div>
+      <p></p>
+      <div class="tagOptions">
+        <div class="subOptions" id="importanceListCheck"><input type="checkbox" id="enableImportanceList" checked> <label for="enableImportanceList">Tag Categories</label></div>
       </div>
-      <div id="processLog">
+    </div>
+        <div id="importanceList" style="display: none;">
+      <span>Tag categories</span>
+      <p></p>
+      <ul id="sortableList"></ul>
+      <div style="display: flex; gap: 5px;">
+        <input type="text" id="newItem" placeholder="Add new item">
+        <button id="addItem">Add Item</button>
+      </div>
+    </div>
+    <div id="processLog">
       <div id="processLogBox"></div>
       <button id="clearProcessLog">Clear</button>
     </div>
@@ -416,15 +469,14 @@
           </div>
         </div>
         <div id="cancelProcess" style="display: none;">
-          <button id="cancelButton"><i class="fa fa-close"
-            aria-hidden="true"></i></button>
+          <button id="cancelButton"><i class="fa fa-close" aria-hidden="true"></i></button>
         </div>
       </div>
       <div class="action">
         <button id="run" type="button" class="el-button el-button--primary"><span>Go</span></button>
       </div>
     </div>
-    </div>
+  </div>
   </div>
   <script src="js/plugin.js"></script>
 </body>

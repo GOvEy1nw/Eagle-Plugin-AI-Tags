@@ -6,12 +6,28 @@ const saveApiKeyButton = document.getElementById('saveApiKey');
 const apiKeyInput = document.getElementById('apiKey');
 const apiKeyStatus = document.getElementById('apiKeyStatus');
 const statusElement = document.getElementById('status');
+const customModelName = document.getElementById('customModelName');
+const newItem = document.getElementById('newItem');
 
 apiKeyInput.addEventListener('paste', (event) => {
   event.preventDefault(); // Prevent the default paste behavior
   const textFromClipboard = eagle.clipboard.readText();
   apiKeyInput.value = textFromClipboard; // Replace the current value with the pasted text
 });
+
+customModelName.addEventListener('paste', (event) => {
+  event.preventDefault(); // Prevent the default paste behavior
+  const textFromClipboard = eagle.clipboard.readText();
+  customModelName.value = textFromClipboard; // Replace the current value with the pasted text
+});
+
+newItem.addEventListener('paste', (event) => {
+  event.preventDefault(); // Prevent the default paste behavior
+  const textFromClipboard = eagle.clipboard.readText();
+  newItem.value = textFromClipboard; // Replace the current value with the pasted text
+});
+
+
 
 document.getElementById('apiProvider').addEventListener('change', () => {
   const apiProvider = document.getElementById('apiProvider').value;
@@ -56,20 +72,72 @@ function toggleOllama() {
 
   if (useOllamaToggle) {
     document.getElementById('localOptions').style.display = 'block';
-    checkStatus(0);
+    document.getElementById('importanceListCheck').style.display = 'flex';
+
   } else {
     document.getElementById('localOptions').style.display = 'none';
-    checkStatus(0);
+    document.getElementById('enableImportanceList').checked = false;
+    document.getElementById('importanceList').style.display = 'none';
+    document.getElementById('importanceListCheck').style.display = 'none';
   }
 }
 
 
 
 // Add event listener to the useOllama checkbox
-document.getElementById('useOllama').addEventListener('change', toggleOllama);
+document.getElementById('useOllama').addEventListener('change', () => {
+  toggleOllama();
+  checkStatus(0);
+});
 
-// Initial call to set the correct display on page load
-toggleOllama();
+async function preloadModel(modelName) {
+  if (!modelName) {
+    console.error('No model selected');
+    statusElement.textContent = 'Error: No model selected';
+    return;
+  }
+  try {
+    document.getElementById('progressBar').style.width = '0%';
+    statusElement.textContent = `Loading ${modelName}...`;
+    document.getElementById('progressBarContainer').classList.add('sheen');
+    document.getElementById('cancelProcess').style.display = 'inherit';
+
+    let progress = 0;
+    let isLoaded = false;
+
+    const interval = setInterval(() => {
+      if (progress < 99 && !isLoaded) {
+        const increment = Math.max(1, 5 - Math.floor(progress / 5));
+        progress += increment;
+        document.getElementById('progressBar').style.width = `${progress}%`;
+        statusElement.textContent = `Loading ${modelName}`;
+      } else if (isLoaded) {
+        clearInterval(interval);
+        progress = 100;
+        document.getElementById('progressBar').style.width = '100%';
+        statusElement.textContent = `${modelName} loaded.`;
+        document.getElementById('progressBarContainer').classList.remove('sheen');
+        console.log(`${modelName} loaded.`);
+      }
+    }, 120);
+
+    const loadModel = async () => {
+      await ollama.chat({
+        model: modelName,
+        messages: [{ role: 'system', content: 'Preloading model' }],
+        stream: false
+      });
+    };
+
+    await loadModel();
+    isLoaded = true;
+    document.getElementById('cancelProcess').style.display = 'none';
+
+  } catch (error) {
+    console.error(`Error loading ${modelName}:`, error);
+    statusElement.textContent = `Error loading ${modelName}`;
+  }
+}
 
 const customModelNameInput = document.getElementById('customModelName');
 const downloadModelButton = document.getElementById('downloadModel');
@@ -103,9 +171,10 @@ downloadModelButton.addEventListener('click', async () => {
           statusElement.textContent = part.status;
         }
       }
-      console.log(`Model ${modelName} loaded successfully.`);
       populateOllamaModels(); // Refresh the model list
       customModelNameInput.value = ''; // Clear the input
+      checkStatus(1500); // Clear after 5 seconds
+      document.getElementById('cancelProcess').style.display = 'none';
     } catch (error) {
       if (isCancelled) {
         statusElement.textContent = 'Download cancelled.';
@@ -113,7 +182,6 @@ downloadModelButton.addEventListener('click', async () => {
         console.error(`Error pulling model ${modelName}:`, error);
         statusElement.textContent = `Error downloading model ${modelName}`;
       }
-      checkStatus(5000); // Clear after 5 seconds
     } finally {
       isCancelled = false; // Reset the flag
     }
@@ -123,37 +191,65 @@ downloadModelButton.addEventListener('click', async () => {
 let isCancelled = false;
 
 async function checkStatus(delay) {
-  setTimeout(async () => {
-    if (document.getElementById('useOllama').checked) {
-
-      apiKeyStatus.innerHTML = '<i class="fa fa-key" style="color:rgb(128,128,128);"></i>';
-      document.getElementById('localOptions').style.display = 'block';
-      try {
-        const response = await ollama.ps();
-        if (response.models.length > 0) {
-          statusElement.textContent = `${response.models[0].name} loaded.`;
-        } else {
-          statusElement.textContent = 'Model will load on next run.';
-        }
-      } catch (error) {
-        console.error('Error checking model status:', error);
-        statusElement.textContent = 'Error checking model status.';
+  await new Promise(resolve => setTimeout(resolve, delay));
+  
+  if (document.getElementById('useOllama').checked) {
+    apiKeyStatus.innerHTML = '<i class="fa fa-key" style="color:rgb(128,128,128);"></i>';
+    document.getElementById('localOptions').style.display = 'block';
+    try {
+      const modelsAvailable = await populateOllamaModels();
+      if (!modelsAvailable) {
+        return; // Exit early if no models are available
       }
+      const modelName = document.getElementById('ollamaModel').value;
+      if (!modelName) {
+        throw new Error('No model selected');
+      }
+      const response = await ollama.ps();
+      if (response.models.length > 0) {
+        if (response.models[0].name === modelName) {
+          statusElement.textContent = `${modelName} loaded.`;
+          console.log(`${modelName} already loaded.`);
+          document.getElementById('progressBar').style.width = '100%';
+          document.getElementById('progressBar').style.backgroundColor = '#007BFF';
+          document.getElementById('progressBarContainer').classList.remove('sheen');
+        } else {
+          if (document.getElementById('preLoadModel').checked) {
+            await preloadModel(modelName);
+          }
+          else {
+            statusElement.textContent = 'Model will load on next run.';
+            document.getElementById('progressBar').style.width = '0%';
+          }
+        }
+      } else {
+        if (document.getElementById('preLoadModel').checked) {
+          await preloadModel(modelName);
+        }
+        else {
+          statusElement.textContent = 'Model will load on next run.';
+          document.getElementById('progressBar').style.width = '0%';
+        }
+      }
+    } catch (error) {
+      console.error('Error checking model status:', error);
+      statusElement.textContent = 'No Model Selected.';
     }
-    else {
-      const apiProvider = document.getElementById('apiProvider').value;
-      const storedApiKey = localStorage.getItem(`${apiProvider}apiKey`);
+  }
+  else {
+    const apiProvider = document.getElementById('apiProvider').value;
+    const storedApiKey = localStorage.getItem(`${apiProvider}apiKey`);
       if (storedApiKey) {
         apiKeyStatus.innerHTML = '<i class="fa fa-key" style="color:#00c040;"></i>';
         statusElement.innerHTML = 'Ready when you are...';
+    document.getElementById('progressBar').style.backgroundColor = '#007BFF';
         document.getElementById('apiKey').placeholder = `API Key Stored`;
       } else {
         apiKeyStatus.innerHTML = '<i class="fa fa-key" style="color:rgb(150, 21, 21);"></i>';
         statusElement.innerHTML = 'Please add API Key.';
         document.getElementById('apiKey').placeholder = `Enter API Key`;
-      }
     }
-  }, delay);
+  }
 }
 
 function processabort() {
@@ -169,20 +265,71 @@ function processabort() {
 
 async function populateOllamaModels() {
   const ollamaModelSelect = document.getElementById('ollamaModel');
+  const deleteModelButton = document.getElementById('deleteModelButton');
   ollamaModelSelect.innerHTML = ''; // Clear existing options
-  const response = await ollama.list();
-  const availableModels = response.models.map(model => model.name);
+  try {
+    const response = await ollama.list();
+    const availableModels = response.models.map(model => model.name);
 
-  availableModels.forEach(modelName => {
-    const option = document.createElement('option');
-    option.value = modelName;
-    option.text = modelName;
-    ollamaModelSelect.add(option);
-  });
-  const savedSettings = localStorage.getItem('pluginSettings');
-  if (savedSettings) {
-    const settings = JSON.parse(savedSettings);
-    document.getElementById('ollamaModel').value = settings.ollamaModel;
+    if (availableModels.length === 0) {
+      statusElement.textContent = 'No models installed';
+      deleteModelButton.disabled = true;
+      deleteModelButton.style.backgroundColor = 'rgb(128, 128, 128)';
+      return false;
+    }
+
+    availableModels.forEach(modelName => {
+      const option = document.createElement('option');
+      option.value = modelName;
+      option.text = modelName;
+      ollamaModelSelect.add(option);
+    });
+    const savedSettings = localStorage.getItem('pluginSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      document.getElementById('ollamaModel').value = settings.ollamaModel;
+    }
+
+    deleteModelButton.disabled = false;
+    deleteModelButton.style.backgroundColor = '';
+    // Add event listener for delete button
+    deleteModelButton.addEventListener('click', async () => {
+      const ollamaModelSelect = document.getElementById('ollamaModel');
+      const selectedModel = ollamaModelSelect.value;
+      if (selectedModel) {
+        try {
+          await ollama.delete({ model: selectedModel });
+          console.log(`Deleted model: ${selectedModel}`);
+          statusElement.textContent = `Deleted model: ${selectedModel}`;
+          
+          // Remove the deleted model from the select element
+          const optionToRemove = ollamaModelSelect.querySelector(`option[value="${selectedModel}"]`);
+          if (optionToRemove) {
+            ollamaModelSelect.removeChild(optionToRemove);
+          }
+          
+          // Select the first available option
+          if (ollamaModelSelect.options.length > 0) {
+            ollamaModelSelect.selectedIndex = 0;
+          }
+          
+          // Refresh the model list
+          await populateOllamaModels();
+        } catch (error) {
+          console.error(`Error deleting model ${selectedModel}:`, error);
+          statusElement.textContent = `Error deleting model ${selectedModel}`;
+        }
+      } else {
+        console.log('No model selected for deletion');
+        statusElement.textContent = 'No model selected for deletion';
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error populating Ollama models:', error);
+    statusElement.textContent = 'Error loading models';
+    return false;
   }
 }
 
@@ -262,23 +409,38 @@ eagle.onPluginCreate(async (plugin) => {
         console.log(img_url);
 
         try {
-          let responseText;
+          let responseText = '';
           if (useOllamaToggle.checked) {
-            const response = await ollama.chat({
-              model: ollamaModel,
-              system: 'You are an expert at generating tags for images. you only respond with a comma separated list of tags, in order of confidence. DO NOT respond with numbered or bulleted lists.',
-              options: {
-                temperature: 1,
-                max_tokens: 500,
-                repeat_penalty: 1.1,
-              },
-              messages: [{
-                role: 'user',
-                content: prompt,
-                images: [img_url]
-              }]
-            });
-            responseText = response.message.content;
+            const importanceList = JSON.parse(localStorage.getItem('importanceList') || '[]');
+            let allTags = new Set(); // Use a Set to automatically remove duplicates
+            for (let i = 0; i < importanceList.length; i++) {
+              const item = importanceList[i];
+              const response = await ollama.chat({
+                model: ollamaModel,
+                options: {
+                  temperature: 1,
+                  max_tokens: 500,
+                  repeat_penalty: 1.1,
+                },
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You are an expert at generating tags for images. You only respond with a comma-separated list of tags in order of confidence.'
+                  },
+                  ...Array.from(allTags).map(tag => ({ role: 'assistant', content: tag })),
+                  {
+                    role: 'user',
+                    content: `Create a comma-separated list of ${(document.getElementById('enableTagLimit').checked ? ` ${document.getElementById('tagLimit').value}` : "")} keywords about the ${item} of this image, in order of confidence. Don't use any other text. Keep keywords singular, not plural. Do not repeat any previously mentioned tags.`,
+                    ...(i === 0 ? { images: [img_url] } : {}) // Only include the image for the first item
+                  }
+                ]
+              });
+              const newTags = response.message.content.split(',').map(tag => tag.trim());
+              newTags.forEach(tag => allTags.add(tag)); // Add new tags to the Set
+              console.log(`Response for ${item}:`, response.message.content);
+            }
+            responseText = Array.from(allTags).join(', '); // Convert Set back to string
+          
           } else if (document.getElementById('apiProvider').value === 'openai') {
             const requestBody = {
               model: "gpt-4o",
@@ -469,6 +631,22 @@ document.getElementById('clearProcessLog').addEventListener('click', () => {
   document.getElementById('processLogBox').innerHTML = '';
 });
 
+
+function toggleImportanceList() {
+  const enableImportanceListCheckbox = document.getElementById('enableImportanceList').checked;
+  document.getElementById('importanceList').style.display = enableImportanceListCheckbox ? 'block' : 'none';
+
+  if (enableImportanceListCheckbox) {
+    document.getElementById('importanceList').style.display = 'block';
+  } else {
+    document.getElementById('importanceList').style.display = 'none';
+  }
+}
+
+document.getElementById('enableImportanceList').addEventListener('change', () => {
+  toggleImportanceList();
+});
+
 // Save settings to localStorage when changed
 function saveSettings() {
   const settings = {
@@ -476,10 +654,12 @@ function saveSettings() {
     tagLimit: document.getElementById('tagLimit').value,
     useThumbnail: document.getElementById('useThumbnail').checked,
     replaceTags: document.getElementById('replaceTags').checked,
-    ollamaModel: document.getElementById('ollamaModel').value,
     useOllama: document.getElementById('useOllama').checked,
+    ollamaModel: document.getElementById('ollamaModel').value,
     showProcessLog: document.getElementById('showProcessLog').checked,
     apiProvider: document.getElementById('apiProvider').value,
+    preLoadModel: document.getElementById('preLoadModel').checked,
+    enableImportanceList: document.getElementById('enableImportanceList').checked,
   };
   localStorage.setItem('pluginSettings', JSON.stringify(settings));
 }
@@ -489,28 +669,147 @@ document.getElementById('enableTagLimit').addEventListener('change', saveSetting
 document.getElementById('tagLimit').addEventListener('input', saveSettings);
 document.getElementById('useThumbnail').addEventListener('change', saveSettings);
 document.getElementById('replaceTags').addEventListener('change', saveSettings);
-document.getElementById('ollamaModel').addEventListener('change', saveSettings);
 document.getElementById('useOllama').addEventListener('change', saveSettings);
+document.getElementById('ollamaModel').addEventListener('change', saveSettings);
 document.getElementById('showProcessLog').addEventListener('change', saveSettings);
 document.getElementById('apiProvider').addEventListener('change', saveSettings);
+document.getElementById('preLoadModel').addEventListener('change', saveSettings);
+document.getElementById('enableImportanceList').addEventListener('change', saveSettings);
 
 // Load settings from localStorage when the plugin is opened
 document.addEventListener('DOMContentLoaded', async () => {
   const savedSettings = localStorage.getItem('pluginSettings');
+  
   if (savedSettings) {
     const settings = JSON.parse(savedSettings);
     document.getElementById('enableTagLimit').checked = settings.enableTagLimit;
     document.getElementById('tagLimit').value = settings.tagLimit;
     document.getElementById('useThumbnail').checked = settings.useThumbnail;
     document.getElementById('replaceTags').checked = settings.replaceTags;
-    document.getElementById('ollamaModel').value = settings.ollamaModel;
     document.getElementById('useOllama').checked = settings.useOllama;
+    
+    const ollamaModelSelect = document.getElementById('ollamaModel');
+    const models = ollamaModelSelect.options;
+    
+    if (models.length > 0) {
+      if (settings.ollamaModel && Array.from(models).some(option => option.value === settings.ollamaModel)) {
+        ollamaModelSelect.value = settings.ollamaModel;
+      } else {
+        ollamaModelSelect.selectedIndex = 0;
+      }
+    } else {
+      statusElement.textContent = 'No models installed';
+    }
+    
     document.getElementById('showProcessLog').checked = settings.showProcessLog;
     document.getElementById('apiProvider').value = settings.apiProvider;
-    toggleTagLimitVisibility(); // Update tag limit visibility based on loaded setting
-    toggleOllama(); // Update the visibility of API key elements based on the loaded setting
+    toggleTagLimitVisibility();
+    toggleOllama();
+    document.getElementById('processLog').style.display = settings.showProcessLog ? 'flex' : '';
+    document.getElementById('preLoadModel').checked = settings.preLoadModel;
     checkStatus(0);
-    populateOllamaModels();
-    document.getElementById('processLog').style.display = settings.showProcessLog ? 'flex' : ''
+    document.getElementById('enableImportanceList').checked = settings.enableImportanceList;
+    toggleImportanceList();
   }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  const sortableList = document.getElementById('sortableList');
+  const newItemInput = document.getElementById('newItem');
+  const addItemButton = document.getElementById('addItem');
+
+  // Function to add a new item
+  function addItem() {
+    const itemText = newItemInput.value.trim();
+    if (itemText) {
+      const li = createListItem(itemText);
+      sortableList.appendChild(li);
+      newItemInput.value = '';
+      saveList();
+    }
+  }
+
+  // Function to create a list item
+  function createListItem(text) {
+    const li = document.createElement('li');
+    li.draggable = true;
+    li.innerHTML = `
+      <span>${text}</span>
+      <button class="deleteItem"><i class="fa fa-trash" aria-hidden="true"></i></button>
+    `;
+    li.querySelector('.deleteItem').addEventListener('click', function() {
+      li.remove();
+      saveList();
+    });
+    return li;
+  }
+
+  // Add item when button is clicked
+  addItemButton.addEventListener('click', addItem);
+
+  // Add item when Enter key is pressed
+  newItemInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+      addItem();
+    }
+  });
+
+  // Drag and drop functionality
+  let draggedItem = null;
+
+  sortableList.addEventListener('dragstart', function (e) {
+    draggedItem = e.target;
+    setTimeout(() => e.target.style.display = 'none', 0);
+  });
+
+  sortableList.addEventListener('dragend', function (e) {
+    setTimeout(() => {
+      e.target.style.display = '';
+      draggedItem = null;
+      saveList(); // Save the list after drag and drop
+    }, 0);
+  });
+
+  sortableList.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(sortableList, e.clientY);
+    const currentItem = draggedItem;
+    if (afterElement == null) {
+      sortableList.appendChild(currentItem);
+    } else {
+      sortableList.insertBefore(currentItem, afterElement);
+    }
+  });
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  // Save list to localStorage
+  function saveList() {
+    const items = Array.from(sortableList.children).map(li => li.querySelector('span').textContent);
+    localStorage.setItem('importanceList', JSON.stringify(items));
+  }
+
+  // Load list from localStorage
+  function loadList() {
+    const items = JSON.parse(localStorage.getItem('importanceList') || '[]');
+    sortableList.innerHTML = ''; // Clear existing items
+    items.forEach(item => {
+      const li = createListItem(item);
+      sortableList.appendChild(li);
+    });
+  }
+
+  // Load the list when the page loads
+  loadList();
 });
