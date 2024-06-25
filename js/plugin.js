@@ -175,6 +175,7 @@ downloadModelButton.addEventListener('click', async () => {
       customModelNameInput.value = ''; // Clear the input
       checkStatus(1500); // Clear after 5 seconds
       document.getElementById('cancelProcess').style.display = 'none';
+      document.getElementById('progressBarContainer').classList.remove('sheen');
     } catch (error) {
       if (isCancelled) {
         statusElement.textContent = 'Download cancelled.';
@@ -184,6 +185,7 @@ downloadModelButton.addEventListener('click', async () => {
       }
     } finally {
       isCancelled = false; // Reset the flag
+      document.getElementById('progressBarContainer').classList.remove('sheen');
     }
   }
 });
