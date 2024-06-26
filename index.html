@@ -100,14 +100,14 @@
       margin: 0;
     }
 
-    #processLog {
+    #pLogContainer {
       display: none;
       flex-direction: column;
       align-items: center;
       height: calc(100vh - 200px);
     }
 
-    #processLogBox {
+    #pLogText {
       font-size: 10px;
       color: #ffffff;
       width: 90%;
@@ -356,7 +356,7 @@
       color: #ff7875;
     }
 
-    #importanceList {
+    #tagCat {
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -372,15 +372,25 @@
   <div id="app" style="margin: auto;">
     <div class="customheader">
       <div class="title"><i class="fa fa-tag" aria-hidden="true" style="color: #007BFF;"></i> AI Auto Tag</div>
-      <div style="-webkit-app-region: no-drag"><label class="switch">
-          <input type="checkbox" id="useOllama">
-          <span class="slider round"></span>
-        </label> Ollama
-      </div>
       <div id="settings" class="tagOptions">
         <p id="apiKeyStatus"></p>
         <button id="settingsButton"><i class="fa fa-cog" aria-hidden="true"></i></button>
         <div id="settingsWindow" class="menu">
+          <div id="apiKeyMenu">
+            <div id="apiOption">
+              <select id="apiProvider" class="dropdown" style="margin-bottom:10px;">
+                <option value="ollama">Ollama</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+                <option value="claude">Claude</option>
+              </select>
+              <div id="apiSettings">
+                <input type="textarea" id="apiKey" placeholder="Enter API key" style="width: 150px;">
+                <button id="saveApiKey"><i class="fa fa-save" aria-hidden="true"></i></button>
+                <button id="clearApiKey"><i class="fa fa-trash" aria-hidden="true"></i></button>
+              </div>
+            </div>
+          </div>
           <div id="localOptions" style="display: none;">
             <div style="display: block; padding-bottom: 5px;">Installed
               Models</div>
@@ -403,22 +413,8 @@
               <button id="downloadModel" style="width: 100%;"><i class="fa fa-download" aria-hidden="true"></i></button>
             </div>
           </div>
-          <div id="apiKeyMenu">
-            <div id="apiOption">
-              <select id="apiProvider" class="dropdown" style="margin-bottom:10px;">
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Gemini</option>
-                <option value="claude">Claude</option>
-              </select>
-              <div id="apiSettings">
-                <input type="textarea" id="apiKey" placeholder="Enter API key" style="width: 150px;">
-                <button id="saveApiKey"><i class="fa fa-save" aria-hidden="true"></i></button>
-                <button id="clearApiKey"><i class="fa fa-trash" aria-hidden="true"></i></button>
-              </div>
-            </div>
-          </div>
-          <div id="generalSettings" style="display: block; margin-top: 15px;"><input type="checkbox" id="showProcessLog"
-              title="Show process log"> <label for="showProcessLog" class="tagsText">Show process log</label></div>
+          <div id="generalSettings" style="display: block; margin-top: 15px;"><input type="checkbox" id="pLogShow"
+              title="Show process log"> <label for="pLogShow" class="tagsText">Show Log</label></div>
         </div>
         <button id="closeButton" class="close-button"><i class="fa fa-close" aria-hidden="true"></i></button>
       </div>
@@ -444,10 +440,10 @@
       </div>
       <p></p>
       <div class="tagOptions">
-        <div class="subOptions" id="importanceListCheck"><input type="checkbox" id="enableImportanceList" checked> <label for="enableImportanceList">Tag Categories</label></div>
+        <div class="subOptions" id="tagCatContainer"><input type="checkbox" id="tagCatChk" checked> <label for="tagCatChk">Tag Categories</label></div>
       </div>
     </div>
-        <div id="importanceList" style="display: none;">
+        <div id="tagCat" style="display: none;">
       <span>Tag categories</span>
       <p></p>
       <ul id="sortableList"></ul>
@@ -456,9 +452,9 @@
         <button id="addItem">Add Item</button>
       </div>
     </div>
-    <div id="processLog">
-      <div id="processLogBox"></div>
-      <button id="clearProcessLog">Clear</button>
+    <div id="pLogContainer">
+      <div id="pLogText"></div>
+      <button id="pLogClear">Clear</button>
     </div>
     <div class="footer-vue">
       <div id="statusContainer">
